@@ -129,9 +129,9 @@ let cryptoUtils = (function factory() {
 		if (typeof salt === 'string') salt = sha256(encoder.encode(salt));
 		if (typeof key === 'string') text = sha256(encoder.encode(key));
 
-		let bufferCount = options.buffers || 8192;
-		let rounds = options.rounds || 4;
-		let delta = options.delta || 3;
+		let bufferCount = options.buffers = options.buffers || 32768;
+		let rounds = options.rounds = options.rounds || 4;
+		let delta = options.delta = options.delta || 3;
 		let buffers = [];
 		
 		let workPeriod = options.workPeriod || 100, workRatio = options.workRatio || 1;

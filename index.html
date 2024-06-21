@@ -46,7 +46,7 @@
 				<progress $value="{progress}" max="1">
 					${d => Math.round(d.progress*100)}%
 				</progress>
-				${d => Math.round(d.seconds)}s left
+				${d => Math.round(d.seconds*(1 - d.progress))}s / ${d => Math.round(d.seconds)}s
 			</template>
 		</div>
 		<div id="result">
@@ -78,10 +78,10 @@
 		<script src="balloon.min.js"></script>
 		<script src="matsui-bundle.min.js"></script>
 		<script>
+			let balloonOptions = {rounds: 5, buffers: 32768 /* *(256 bits) = 1MB of memory */};
 			let render = Matsui.replace(document.body, {
 				encrypt: false,
 				needsKey: true,
-				options: {},
 				working: null,
 				files: [],
 				filename: '',
@@ -102,12 +102,12 @@
 					seconds: null
 				};
 				let start = Date.now();
-				cryptoUtils.balloonPair(salt, key, {
-					progress: (n, N) => {
-						display.working.progress = n/N;
-						display.working.seconds = Math.round((Date.now() - start)*N/n)/1000;
-					}
-				}).then(pair => {
+				let options = Object.create(balloonOptions);
+				options.progress = (n, N) => {
+					display.working.progress = n/N;
+					display.working.seconds = Math.round((Date.now() - start)*N/n)/1000;
+				};
+				cryptoUtils.balloonPair(salt, key, options).then(pair => {
 					display.working = null;
 					display.encrypt = async content => {
 						if (content instanceof Blob) {
@@ -167,7 +167,7 @@
 				}));
 				window.buffer = buffer;
 
-				let optionsJson = JSON.stringify(display.options);
+				let optionsJson = JSON.stringify(balloonOptions);
 				let encrypted64 = await display.encrypt(buffer);
 
 /*
