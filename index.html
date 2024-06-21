@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Protect</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<style>
+			body {
+				font-family: sans-serif;
+				line-height: 1.35;
+				min-height: 100vh;
+				margin: 0;
+				box-sizing: border-box;
+
+				text-align: center;
+				
+				display: flex;
+				flex-direction: column;
+			}
+			.interaction-drop {
+				outline: 0.5em dotted currentcolor;
+				outline-offset: -0.65em;
+				opacity: 0.65;
+			}
+			#working, #result {
+				width: 100%;
+				height: 4rem;
+				background: #DEF;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-items: stretch;
+			}
+			#result {
+				background: #FED;
+			}
+			button {
+				padding: 0.3em 0.5em;
+				font-size: inherit;
+			}
+		</style>
+	</head>
+	<body $drop-file="${addFiles}">
+		<div id="working" @data="{working}">
+			<template @if="{=}">
+				<label>{task}</label>
+				<progress $value="{progress}" max="1">
+					${d => Math.round(d.progress*100)}%
+				</progress>
+				${d => Math.round(d.seconds)}s left
+			</template>
+		</div>
+		<div id="result">
+			<form @if="{needsKey}" onsubmit="return false">
+				<input id="seedKey" placeholder="passphrase" type="password" autofocus>
+				<input type="submit" $click="${_ => generateKey(document.querySelector('#seedKey').value)}">
+			</form>
+			<template @if="{result}">
+				{filename} ({result.size})
+				<div>
+					<a $href="{result.url}" target="_blank" $download="{filename}"><button>💾 download</button></a>
+					<!--<a $href="{result.url}" target="_blank"><button>test</button></a>-->
+				</div>
+			</template>
+		</div>
+		<div>
+			Files
+			<div @foreach="{files}">
+				{name} {size}
+			</div
+		</div>
+		
+		<!--<figure>
+			<blockquote>
+				For example, if we configure Balloon to use Blake2b as the underlying hash function, run the construction for five "rounds" of hashing, and set the space parameter to require the attacker to use 1 MiB of working space to compute the function, then we can compute Balloon Hashes at the rate of 13 hashes per second on a modern server, compared with 12.8 for Argon2i, and 2.1 for Catena DBG (when Argon2i and Catena DBG are instantiated with Blake2b as the underlying cryptographic hash function).
+			</blockquote>
+			<figcaption>from <a href="https://eprint.iacr.org/2016/027">https://eprint.iacr.org/2016/027</a></figcaption>
+		</figure>-->
+		<script src="balloon.min.js"></script>
+		<script src="matsui-bundle.min.js"></script>
+		<script>
+			let render = Matsui.replace(document.body, {
+				encrypt: false,
+				needsKey: true,
+				options: {},
+				working: null,
+				files: [],
+				filename: '',
+				result: null,
+				foo: 'bar'
+			});
+			document.querySelector('#seedKey').focus();
+			let display = render.data;
+		
+			let salt = new Uint8Array(32);
+			crypto.getRandomValues(salt);
+			
+			function generateKey(key) {
+				display.needsKey = false;
+				display.working = {
+					task: "computing key",
+					progress: 0,
+					seconds: null
+				};
+				let start = Date.now();
+				cryptoUtils.balloonPair(salt, key, {
+					progress: (n, N) => {
+						display.working.progress = n/N;
+						display.working.seconds = Math.round((Date.now() - start)*N/n)/1000;
+					}
+				}).then(pair => {
+					display.working = null;
+					display.encrypt = async content => {
+						if (content instanceof Blob) {
+							content = await content.arrayBuffer();
+						}
+						return pair.encrypt(content, true);
+					};
+
+					updateResult();
+				});
+			}
+			
+			async function updateResult() {
+				if (display.result?.url) {
+					URL.revokeObjectURL(display.result.url);
+				}
+				if (!display.encrypt || !display.files.length) return;
+				delete display.result;
+				
+				let files = Matsui.getRaw(display.files);
+
+				let dataLength = 0;
+				function spaceForBlock(data) {
+					if (typeof data === 'string') {
+						// convert to UTF-8
+						let encoder = new TextEncoder();
+						data = encoder.encode(data);
+					}
+					if (typeof data !== 'number') data = data.length;
+					dataLength += 8 + data;
+				}
+				files.forEach(file => {
+					spaceForBlock(file.name || 'Media');
+					spaceForBlock(file.type);
+					spaceForBlock(file.size);
+				});
+				
+				// Big concatenated buffer of (name, type, body) for each file
+				let buffer = new ArrayBuffer(dataLength), view = new DataView(buffer), bufferPos = 0;
+				function writeBlock(data) {
+					if (typeof data === 'string') {
+						// convert to UTF-8
+						let encoder = new TextEncoder();
+						data = encoder.encode(data);
+					}
+					view.setUint32(bufferPos, (data.length/4294967296)|0);
+					view.setUint32(bufferPos + 4, data.length|0);
+					bufferPos += 8;
+					new Uint8Array(buffer).set(data, bufferPos);
+					bufferPos += data.length;
+				}
+				await Promise.all(files.map(async file => {
+					let array = new Uint8Array(await file.arrayBuffer());
+					writeBlock(file.name || 'Media');
+					writeBlock(file.type);
+					writeBlock(array);
+				}));
+				window.buffer = buffer;
+
+				let optionsJson = JSON.stringify(display.options);
+				let encrypted64 = await display.encrypt(buffer);
+
+/*
+async function d(key) {
+	let body = document.body;
+	balloonOptions.progress = ((t, n) => body.textContent = Math.round(100 * t / n) + "%");
+	let n = await cryptoUtils.balloonPair(Uint8Array.fromBase64(s64), key, balloonOptions),
+		arrayBuffer = await n.decrypt(e64);
+	body.textContent = '';
+	let dataView = new DataView(arrayBuffer),
+		r = new Uint8Array(arrayBuffer),
+		i = 0;
+
+	function readChunk(t) {
+		let e = 4294967296 * dataView.getUint32(i) + dataView.getUint32(i + 4);
+		i += 8;
+		let n = r.subarray(i, i + e);
+		return i += e, t ? new TextDecoder("utf-8", {
+			fatal: !0
+		}).decode(n) : n
+	}
+	let tagMap={image:'img',audio:'audio',video:'video',text:'iframe'};
+	for (; i < r.length;) {
+		let name = readChunk(1), type = readChunk(1);
+		let a = document.createElement("a");
+		a.href = URL.createObjectURL(new File([readChunk()], name, {type: type}));
+		a.setAttribute("download", a.textContent = name);
+		body.append(a);
+		let mediaType = type.split('/')[0];
+		if (tagMap[mediaType]) {
+			let player = document.createElement(tagMap[mediaType]);
+			player.src = player.data = a.href;
+			player.controls = true;
+			body.append(player);
+		}
+	}
+}
+ */
+				let html = `<!DOCTYPE html>
+<html><head><title></title><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{display: flex;flex-direction:column;justify-content:stretch;align-items:center;min-height:100vh;justify-content:center;font:12pt sans-serif;color:#FFF;background:#222;margin:0;padding:0}img,video{max-width:100vw;max-height:100vh;flex-shrink:1}a{color:#8AF;text-decoration:none;margin-top:1em}iframe{background:#FFF;width:100%;flex-grow:0.8}</style>
+</head><body><form><input id="p" type="password" autofocus><input type="submit" onclick="d(document.querySelector('#p').value).catch(e=>document.body.textContent='failed')"></form><script>
+let balloonOptions=${optionsJson},s64=${JSON.stringify(salt.toBase64())},e64=${JSON.stringify(encrypted64)};
+let cryptoUtils=(${cryptoUtils.factory})();
+async function d(t){let e=document.body;balloonOptions.progress=((t,n)=>e.textContent=Math.round(100*t/n)+"%");let n=await cryptoUtils.balloonPair(Uint8Array.fromBase64(s64),t,balloonOptions),a=await n.decrypt(e64);e.textContent="";let o=new DataView(a),r=new Uint8Array(a),i=0;function l(t){let e=4294967296*o.getUint32(i)+o.getUint32(i+4);i+=8;let n=r.subarray(i,i+e);return i+=e,t?new TextDecoder("utf-8",{fatal:!0}).decode(n):n}let d={image:"img",audio:"audio",video:"video",text:"iframe"};for(;i<r.length;){let t=l(1),n=l(1),a=document.createElement("a");a.href=URL.createObjectURL(new File([l()],t,{type:n})),a.setAttribute("download",a.textContent=t),e.append(a);let o=n.split("/")[0];if(d[o]){let t=document.createElement(d[o]);t.src=t.data=a.href,t.controls=!0,e.append(t)}}}
+</${'script'}></body></html>`;
+				let htmlBlob = new Blob([html], {type: 'text/html'});
+				display.result = {
+					url: URL.createObjectURL(htmlBlob),
+					size: Math.ceil(html.length/1000) + 'kB'
+				};
+			}
+			
+			function addFiles(files) {
+				files.forEach(file => {
+					display.files.push(file);
+					if (!display.filename) {
+						display.filename = file.name.replace(/\.[^\.]*$/, '') + '.html';
+					}
+				});
+				if (!display.working) updateResult();
+			}
+
+			if (0) blobberPromise.then(pair => {
+				let logJson = x => console.log(JSON.stringify(x));
+				pair.encrypt("abcd", true).then(console.log);
+				pair.encrypt("wxyz").then(console.log);
+				pair.encrypt("abcd", true).then(x => pair.decrypt(x, true)).then(logJson);
+				pair.encrypt("wxyz").then(x => pair.decrypt(x, true)).then(logJson);
+				
+				pair.encrypt("This encoding should fail").then(combined => {
+					combined[10] += 5;
+					return combined;
+				}).then(pair.decrypt).then(x => {throw Error("should have failed!")}, e => console.log("✓ modified data failed"));
+				return pair;
+			});
+		</script>
+	</body>
+</html>
