@@ -33,7 +33,7 @@
 			#result {
 				background: #FED;
 			}
-			button {
+			input, button {
 				padding: 0.3em 0.5em;
 				font-size: inherit;
 			}
@@ -50,10 +50,10 @@
 			</template>
 		</div>
 		<div id="result">
-			<form @if="{needsKey}" onsubmit="return false">
-				<input id="seedKey" placeholder="passphrase" type="password" autofocus>
-				<input type="submit" $click="${_ => generateKey(document.querySelector('#seedKey').value)}">
-			</form>
+			<div @if="{needsKey}">
+				<input id="seedKey" placeholder="passphrase" type="password" autofocus $done="${_=>document.querySelector('#seedButton').click()}">
+				<button id="seedButton" $click="${_ => generateKey(document.querySelector('#seedKey').value)}">generate</button>
+			</div>
 			<template @if="{result}">
 				{filename} ({result.size})
 				<div>
@@ -63,7 +63,7 @@
 			</template>
 		</div>
 		<div>
-			Files
+			<input type="file" $drop-file>
 			<div @foreach="{files}">
 				{name} {size}
 			</div
