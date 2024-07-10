@@ -1,4 +1,7 @@
-all: balloon.min.js matsui-bundle.min.js
+all: balloon.min.js matsui-bundle.min.js protect.html
+
+protect.html:
+	node -e 'const fs=require("fs");fs.writeFileSync("protect.html",fs.readFileSync("index.html","utf8").replace(/<script src="([^"]*)">/g,(m,filename)=>"<script>"+fs.readFileSync(filename,"utf8")));'
 
 %.min.js: %.js
 	@cd "$$(dirname $@)" && npx uglify-js@3.17.4 "$$(basename $<)" -o "$$(basename $@)" --source-map "url=$$(basename $@).map" \

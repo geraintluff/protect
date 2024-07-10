@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Protect</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<style>
+			body {
+				font-family: sans-serif;
+				line-height: 1.35;
+				min-height: 100vh;
+				margin: 0;
+				box-sizing: border-box;
+
+				text-align: center;
+				
+				display: flex;
+				flex-direction: column;
+			}
+			.interaction-drop {
+				outline: 0.5em dotted currentcolor;
+				outline-offset: -0.65em;
+				opacity: 0.65;
+			}
+			#working, #result {
+				width: 100%;
+				height: 4rem;
+				background: #DEF;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-items: stretch;
+			}
+			#result {
+				background: #FED;
+			}
+			input, button {
+				padding: 0.3em 0.5em;
+				font-size: inherit;
+			}
+		</style>
+	</head>
+	<body $drop-file="${addFiles}">
+		<div id="working" @data="{working}">
+			<template @if="{=}">
+				<label>{task}</label>
+				<progress $value="{progress}" max="1">
+					${d => Math.round(d.progress*100)}%
+				</progress>
+				${d => Math.round(d.seconds*(1 - d.progress))}s / ${d => Math.round(d.seconds)}s
+			</template>
+		</div>
+		<div id="result">
+			<div @if="{needsKey}">
+				<input id="seedKey" placeholder="passphrase" type="password" autofocus $done="${_=>document.querySelector('#seedButton').click()}">
+				<button id="seedButton" $click="${_ => generateKey(document.querySelector('#seedKey').value)}">generate</button>
+			</div>
+			<template @if="{result}">
+				{filename} ({result.size})
+				<div>
+					<a $href="{result.url}" target="_blank" $download="{filename}"><button>💾 download</button></a>
+					<!--<a $href="{result.url}" target="_blank"><button>test</button></a>-->
+				</div>
+			</template>
+		</div>
+		<div>
+			<input type="file" $drop-file>
+			<div @foreach="{files}">
+				{name} {size}
+			</div
+		</div>
+		
+		<!--<figure>
+			<blockquote>
+				For example, if we configure Balloon to use Blake2b as the underlying hash function, run the construction for five "rounds" of hashing, and set the space parameter to require the attacker to use 1 MiB of working space to compute the function, then we can compute Balloon Hashes at the rate of 13 hashes per second on a modern server, compared with 12.8 for Argon2i, and 2.1 for Catena DBG (when Argon2i and Catena DBG are instantiated with Blake2b as the underlying cryptographic hash function).
+			</blockquote>
+			<figcaption>from <a href="https://eprint.iacr.org/2016/027">https://eprint.iacr.org/2016/027</a></figcaption>
+		</figure>-->
+		<script>let cryptoUtils=function r(){let n={factory:r};var e=[];for(let t=2;e.length<64;++t)e.some(r=>!(t%r))||e.push(t);let g=4294967296,p=e.slice(0,8).map(r=>Math.sqrt(r)*g|0),D=e.map(r=>Math.cbrt(r)*g|0),h=new Int32Array(64),d=new Int32Array(32),x=n.sha256=function(r,t){"string"==typeof r&&(r=(new TextEncoder).encode(r));var e="hex"==t,n=(t=(t=e?null:t)||new Uint8Array(32),r.length),a=16*Math.ceil((n+1+8)/64),i=32==a?d.fill(0):new Int32Array(a),o=new Uint8Array(i.buffer),y=(o.set(r),o[n]=128,new DataView(i.buffer));for(let r=0;r<a;++r)i[r]=y.getInt32(4*r);i[a-1]=8*n|0,i[a-2]=8*n/g|0;var f=new Int32Array(t.buffer);for(let r=0;r<8;++r)f[r]=p[r];var l=f.slice(0,8);for(let t=0;t<a;t+=16){for(let r=0;r<16;++r)h[r]=i[t+r];for(let r=16;r<64;++r){var w=h[r-15],c=h[r-2];h[r]=h[r-16]+h[r-7]+((w>>>7|w<<25)^(w>>>18|w<<14)^w>>>3)+((c>>>17|c<<15)^(c>>>19|c<<13)^c>>>10)|0}for(let r=0;r<64;r++){var A=l[0],u=l[4],v=l[7]+((u>>>6|u<<26)^(u>>>11|u<<21)^(u>>>25|u<<7))+(u&l[5]^~u&l[6])+D[r]+h[r],s=(A&l[1]^A&l[2]^l[1]&l[2])+((A>>>2|A<<30)^(A>>>13|A<<19)^(A>>>22|A<<10));l[7]=l[6],l[6]=l[5],l[5]=u,l[4]=l[3]+v|0,l[3]=l[2],l[2]=l[1],l[1]=A,l[0]=v+s|0}for(let r=0;r<8;r++)f[r]=l[r]=f[r]+l[r]|0}var U=new DataView(t.buffer);for(let r=0;r<8;r++)U.setInt32(4*r,f[r]);return e?Array.from(t,r=>(r>>>4).toString(16)+(15&r).toString(16)).join(""):t};return n.balloon=async function(n,r,t={}){var e=new TextEncoder,a=("string"==typeof n&&(n=x(e.encode(n))),"string"==typeof r&&(text=x(e.encode(r))),t.buffers=t.buffers||32768),i=t.rounds=t.rounds||4,o=t.delta=t.delta||3,y=[],f=t.workPeriod||100;let l=f*(1/(t.workRatio||1)-1);var w=t.progress||(r=>r);32!=n.length&&(n=x(n)),32!=r.length&&(r=x(r));let c=new Uint8Array(68),A=new DataView(c.buffer);var u=a*(1+i*(1+2*o));let v=0;function s(t,e){A.setUint32(0,v++,!0);for(let r=0;r<32;++r)c[4+r]=t[r];for(let r=0;r<32;++r)c[36+r]=e[r];return x(c)}y[0]=s(r,n);for(let r=1;r<a;++r)y[r]=s(y[r-1],n);let U=Date.now()+f;var g=new Uint8Array(32),p=new DataView(g.buffer);for(let e=0;e<i;++e)for(let t=0;t<a;++t){Date.now()>U&&(w(v,u),e=await new Promise((t,r)=>{setTimeout(r=>t(e),l)}),U=Date.now()+f);var D=0==t?y[a-1]:y[t-1];y[t]=s(D,y[t]);for(let r=0;r<o;++r){p.setUint32(0,e,!0),p.setUint32(4,t,!0),p.setUint32(8,r,!0);var h=s(n,g),h=new DataView(h.buffer).getUint32(0,!0);y[t]=s(y[t],y[h%a])}}return w(v,u),y[a-1]},n.aesPair=async function(r){return"string"==typeof r&&(r=Uint8Array.fromBase64(r)),crypto.subtle.importKey("raw",r,"AES-GCM",!1,["encrypt","decrypt"]).then(a=>({key:a,encrypt:(r,e)=>{"string"==typeof r&&(r=(new TextEncoder).encode(r));let n=new Uint8Array(12);return self.crypto.getRandomValues(n),crypto.subtle.encrypt({name:"AES-GCM",iv:n,tagLength:128},a,r).then(r=>{r=new Uint8Array(r);var t=new Uint8Array(12+r.length);return t.set(n),t.set(r,12),e?t.toBase64(!0):t})},decrypt:(r,t)=>{var e=(r="string"==typeof r?Uint8Array.fromBase64(r):r).subarray(0,12),r=r.subarray(12);return crypto.subtle.decrypt({name:"AES-GCM",iv:e,tagLength:128},a,r).then(r=>t?new TextDecoder("utf-8",{fatal:!0}).decode(r):r)}}))},n.balloonPair=async function(r,t,e={}){return n.balloon(r,t,e).then(n.aesPair)},Uint8Array.prototype.toBase64=function(r){let t="";return this.forEach(r=>t+=String.fromCharCode(r)),t=btoa(t),t=r?t.replace(/\+/g,"-").replace(/\//g,"_").replace(/=+/,""):t},Uint8Array.fromBase64=r=>Uint8Array.from(atob(r.replace(/_/g,"/").replace(/-/g,"+")),r=>r.charCodeAt(0)),Uint8Array.prototype.toHex=function(){return Array.from(this,r=>(r>>>4).toString(16)+(15&r).toString(16)).join("")},Uint8Array.fromHex=t=>{var e=t.length/2,n=new Uint8Array(e);for(let r=0;r<e;++r)n[r]=parseInt(t.slice(2*r,2*r+2),16)||0;return n},n}();
+//# sourceMappingURL=balloon.min.js.map</script>
+		<script>"use strict";self.Matsui=(e=>{var t;Object.hasOwn||(Object.hasOwn=(e,t)=>Object.prototype.hasOwnProperty.call(e,t));let o=e=>e,p=e=>e&&"object"==typeof e,h=()=>document.createTextNode("");function n(e,t){for(;e.nextSibling&&e.nextSibling!=t;)e.nextSibling.remove()}function u(){var e=document.createDocumentFragment();let t=h(),r=h();return e.append(t,r),{t:e,o:(...e)=>{n(t,r),t.after(...e)}}}let f=Symbol();function c(t){if(p(t)){let e=t[f];for(;e&&e!=t;)e=(t=e)[f]}return t}let i=[],l=null;function a(){for(clearTimeout(l),l=null;i.length;)i.shift()()}function s(t,...r){i.push(e=>t(...r)),null==l&&(requestAnimationFrame(a),l=setTimeout(a,0))}let d=Symbol(),v=Symbol(),m=Symbol("no change"),y=Symbol("replace"),g={apply(r,n,o){return p(n)?p(r)?Array.isArray(n)?n:(n[y]&&(o?r[y]=!0:delete n[y]),Object.keys(n).forEach(e=>{var t=n[e];Object.hasOwn(r,e)?null!=t||o?r[e]=g.apply(r[e],t,o):delete r[e]:null==t&&!o||(r[e]=t)}),r):(o&&(n[y]=!0),n):n},make(n,o,e){if(!e||n!==o){if(!p(o))return o;if(!p(n))return o[y]=!0,o;if(Array.isArray(o))return o;let r={};return Object.keys(o).forEach(e=>{var t;Object.hasOwn(n,e)?void 0!==(t=g.make(n[e],o[e],!0))&&(r[e]=t):r[e]=o[e]}),Object.keys(n).forEach(e=>{Object.hasOwn(o,e)||(r[e]=null)}),e&&0==Object.keys(r).length?void 0:r}},tracked(e,t,r,...n){if(!p(e))return e;let o=m,i=m,l=()=>{var e;i!=m&&(e=i,i=m,r(e))},u=e=>{r&&(i==m?(i=o,s(l)):i=g.apply(i,o,!0))},a=(n.length&&u(n[0]),(e,o)=>new Proxy(e,{get(e,t){var r=e[t];return t==f?e:p(r)?a(r,e=>o({[t]:e})):r},set(e,t,r,n){if(null==r)return delete n[t];if((r=c(r))===e[t])return!0;if(n=g.make(e[t],r),p(n))n[y]=!0;else if(r===e[t])return!0;return!!Reflect.set(e,t,r)&&(o({[t]:n}),!0)},deleteProperty(e,t){return!(t in e)||delete e[t]&&(o({[t]:null}),!0)}}));return a(e,e=>{o=o!=m?g.apply(o,e,!0):(o=e,t&&t(e),u(),m)})},addNoChange(e){return g.addHidden(e,m)},addHidden(e,n){return p(e)?new Proxy(e,{get(e,t){var r;return t==d?n:t==v||t==f?e:(e=e[t],r=p(n)&&t in n,g.addHidden(e,r?n[t]:m))},has(e,t){return t==d||t in e}}):e},hasHidden(e){return d in e},none:m,getHidden(e,r){var t;return p(e)?void 0!==(t=c(e[d]))?t===m?void 0===r?m:r:t:new Proxy(e,{get(e,t){return null==(e=e[t])?null:g.getHidden(e,r)},has(e,t){return!0}}):e},withoutHidden(e){return p(e)&&e[v]||e}},w=Symbol("accessed"),b=Symbol(),E=Symbol("list-keys"),O={tracked(e,n){if(!p(e))return n[w]=!0,e;let o=Array.isArray(e);return new Proxy(e,{get(e,t){var r=e[t];return t==f||t==b?e:t==w?(n[w]=w,e):o&&"length"===t?(n[E]=E,r):("function"!=typeof r||r.prototype||(n[w]=w),t in n||(n[t]={}),O.tracked(r,n[t]))},ownKeys(e){return n[E]=E,Reflect.ownKeys(e)}})},pierce(e,t){return e&&e[t?b:w]||e},flags:{listKeys:E,pierced:w},forMerge:function e(t,r,n){if(r!=m){if(t[w])return!0;if(!p(r)||Array.isArray(r)||r[y])return!0;if(t[E]){if(!n)return!0;for(var o in r)if(o=r[o],!p(o)||Array.isArray(o)||o[y])return!0}for(var i in r)if(t[i]&&e(t[i],r[i],n))return!0}return!1}},$=Symbol(),j=(n,...r)=>{for(let e=0;e<n.length;++e)n[e][$]&&(n.splice(e,1,...n[e][$]),--e);if(r.length){let e=j(n);n=[(...t)=>e(...r.map(e=>e(...t)),...t.slice(r.length))]}Object.freeze(n);let o=!0,u=[],a=[];var e=(...i)=>{for(let e=0;e<i.length;++e)i[e]=O.pierce(i[e]);var e=i.map(e=>g.withoutHidden(e));let l=i.map(e=>c(e)),t=o||l.length!=a.length;if(!t)for(let e=0;e<l.length;++e)if(a[e]!==l[e]){t=!0;break}if(t){a=l;let r=o?e:i;o=!1,n.forEach((e,t)=>{e(...(u[t]=l.map(e=>({}))).map((e,t)=>O.tracked(r[t],e)))})}else{let o=i.map(e=>g.getHidden(e,m));n.forEach((t,r)=>{for(let e=0;e<i.length;++e){var n=u[r][e];if(O.forMerge(n,o[e],!0))return void t(...(u[r]=l.map(e=>({}))).map((e,t)=>O.tracked(i[t],e)))}})}};return e[$]=n,e};function k(e){let r=0;if(!(e=(e="="==e?"$0":e).replace(/^\$[0-9]+($|\.)/,e=>(r=parseInt(e.substr(1),10),""))).length)return(...e)=>e[r];let n=e.split(".");if(1!=n.length)return(...e)=>{let t=e[r];return n.forEach(e=>{t=t?.[e]}),t};{let t=n[0];return(...e)=>e[r]?.[t]}}let A=/\$\{/g;function I(n,o){let i=0;for(var l,u=[];l=A.exec(n);){u.push(n.slice(i,l.index));let e=l.index+2,t=e+1,r;for(;t<n.length;){if("}"==n[t]){var a=n.slice(e,t);try{r=null,new Function("return "+a);break}catch(e){r=e}}++t}if(r)return console.error(r),u.push(`{${r.message}}`),u.join("");u.push(o(n.slice(e,t))),A.lastIndex=i=t+1}return u.push(n.slice(i)),u.join("")}function _(e,t){let n=e.split(R);for(let e=1;e<n.length;e+=2){var o=n[e];let r=o.slice(1,-1);if("{"==o[0])if(t){let t=r.split(",").map(k);1==t.length&&(t=t[0]),n[e]=e=>t}else n[e]=e=>k(r);else n[e]=e=>e[r]}return t=>{let e=n.map(e=>"function"==typeof e?e(t):e).filter(e=>""!=e);return 1==e.length?e[0]:e.some(e=>"function"==typeof e)?(...t)=>e.map(e=>"function"==typeof e?e(...t):e).join(""):e.join("")}}function D(e){if(/^template$/i.test(e.tagName))return 1;for(var t of e.attributes||[])if("@"==t.name[0])return 1}function S(e){return/^script$/i.test(e.tagName)}function L(e){return e.slice(1).toLowerCase().replace(/-+(.)/g,(e,t)=>t.toUpperCase())}let R=/(\{[a-z0-9_=\.,\$-]+\}|\uF74A[0-9]+\uF74B)/giu,H=/((\$[a-z0-9_-]+)*)(\{([a-z0-9_=\.,\$-]+)\}|\uF74A([0-9]+)\uF74B)/giu,M=Symbol();function T(e){let c=e.content||e,s=[],d={},p=!1,v=(Array.from(c.childNodes).forEach(t=>{if("TEMPLATE"==t.tagName){var r=t.getAttribute("name");if(r){p=!0;let e=e=>null;t.hasAttribute("$filter")&&(e=_(t.getAttribute("$filter"))),d[r]={i:T(t),l:t[M],u:e},t.remove()}}}),function r(e,l){if(3==e.nodeType){var u=l,a=e.nodeValue;let n,o=0;for(;n=H.exec(a);){let i=a.slice(o,n.index),l=(o=H.lastIndex,n[1].split("$").slice(1)),e=n[4],t=n[5],r=null;e&&(r=e.split(",").map(k)),s.push((n,e)=>{let o=r||[].concat(e[t]);return"function"==typeof o[0]&&l.some(e=>"template"===e)&&(n=n.extend()).add("template",o.shift()),o.forEach((t,e)=>{"function"!=typeof t&&(o[e]=e=>t)}),{p:u,v:(e,t,r)=>{i&&e.before(i),r=function(n,e,o){let i=e.map(e=>{var t=n.named[e];if(t)return t;let r="Template not found: "+e;return console.error(r),e=>({node:document.createTextNode(r),updates:[]})});return function t(r){if(r>=e.length)return o;let n=i[r];return e=>n(t(r+1))}(0)(n.dynamic)}(n,l,r),e.before(r.node),t.push(j(r.updates,...o))}}})}if(0<o){let t=a.slice(o),r=t?e=>e.nodeValue=t:e=>e.remove();s.push(e=>({p:u,v:r}))}}else if(1===e.nodeType){if(D(e)&&l.length){if("TEMPLATE"==e.tagName&&e.hasAttribute("name"))throw Error('<template name=""> can only be immediate child');let o=e[M],i=T(e);return s.push((e,t)=>{var r={};t[o](r);let n=i(e,r);return{p:l,v:(e,t,r)=>{r=n(r),e.replaceWith(r.node),t.push(j(r.updates))}}}),e.replaceWith(h())}if(S(e))return;for(var t of Array.from(e.attributes))!function(e,r,n){if("$"==r.name[0]){e.removeAttribute(r.name);let p="-"==r.name[1],v=p?r.name.slice(2):L(r.name),t=_(r.value);s.push((c,e)=>{let s=t(e),d="function"==typeof s;return{p:n,v:(r,e,t)=>{let n=[];var o,i,l,u;let a=d?(...e)=>s(...e,...n):s,f;f=p?e=>{var t=d?a():s;null==t?r.removeAttribute(v):r.setAttribute(v,t)}:v in c.attributes?c.attributes[v](r,a,e=>n[e||0]):(o=d?a:()=>s,i=r,l=v,u=o,"on"+l in i?void i.addEventListener(l,u):l in i?e=>{var t=u();try{i[l]=t}catch(e){null==t?i.removeAttribute(l):i.setAttribute(l,t)}}:e=>{var t=u();null==t&&i.hasAttribute(l)?i.removeAttribute(l):i.getAttribute(l)!=t&&i.setAttribute(l,t)}),e.push((...t)=>{n=t,f&&f(...t);for(let e=0;e<t.length;++e)n[e]=g.withoutHidden(O.pierce(t[e],!0))})}}})}}(e,t,l)}(e.childNodes||[]).forEach((e,t)=>{r(e,l.concat(t))})}(c,[]),{}),m=!1;for(var t of e.attributes||[]){var r;"@"==t.name[0]&&(m=!0,r=L(t.name),v[r]=_(t.value,!0))}return(t,r)=>{var e,n=t;if(p||m)for(var o in t=t.extend(),d){var i=d[o],l=i.l;let e={};l?r[l](e):e=r,l=i.u(e),i=i.i(t,e),t.add(o,i,l)}let u=s.map(e=>e(t,r)),a=r=>{let n=c,o=(c=c.cloneNode(!0),[]),i=u.map(e=>{let t=n;return e.p.forEach(e=>t=t.childNodes[e]),t});return u.forEach((e,t)=>{e.v(i[t],o,r)}),{node:n,updates:o}};for(e in v){var f=t.transforms[e];if(!f)throw Error("Unknown transform: "+e);a=f(a,v[e](r),n,t)}return a}}let P=Symbol(),B=new WeakMap,J=/\uF74A!?[0-9]+\uF74B/gu,C=/^\uF74A![0-9]+\uF74B$/gu,x=new class z{attributes={};transforms={};named={};constructor(e){this.#m=e,this.attributes=Object.create(e?e.attributes:null),this.transforms=Object.create(e?e.transforms:null),this.named=Object.create(e?e.named:null),this.dynamic=n=>{let o=u(),i,l;return{node:o.t,updates:[(...e)=>{if(i&&i(...e))return l(...e);var t=this.getForData(...e),r=t.bind(n||this.dynamic);l=j(r.updates),i=t.filter,o.o(r.node),l(...e)}]}}}#m;#h=[];extend(){return new z(this)}add(e,t,r){if("function"!=typeof(t="function"!=typeof t?t&&t.dynamic:t))throw Error("Template not a function");return e&&(this.named[e]=t),r&&this.#h.unshift({u:r,v:t}),this}addElement(e,t,r){return this.add(e,this.fromElement(t),r)}addAll(e){return(e="string"==typeof(e=e||"template")?document.querySelectorAll(e):e).forEach(e=>{var t=e.id||e.getAttribute("name");let r=null;e.hasAttribute("$filter")&&(r=_(e.getAttribute("$filter"))(null)),"TEMPLATE"===e.tagName&&t&&this.addElement(t,e,r)}),this}addTag(r,n){return(e,...t)=>{e=this.fromTag(e,...t),this.add(r,e,n)}}getForData(...t){for(let e=0;e<this.#h.length;++e){var r=this.#h[e];if(r.u(...t))return{bind:r.v,filter:r.u}}if(this.#m)return this.#m.getForData(...t);throw Error("No template for data")}fromElement(e){if("string"==typeof e){if(!(o=document.querySelector(e)))throw Error("Invalid element:"+e);e=o}if(!e[P]){let u=0,a=e=>"\uf74a"+(e?"!":"")+ ++u+"\uf74b",f="__matsui_template",c={},s=[];var t,o;!function t(r,e){function n(e){var t=a();return c[t]=f+`[${u}]=(${e});`,t}if(3===r.nodeType){var o=u,i=I(r.nodeValue,n);u>o&&(r.nodeValue=i)}else if(1===r.nodeType)if(S(r))11==r.getRootNode().nodeType&&(o=a(!0),c[o]=r.textContent,r.textContent=o,s.push(r));else if(i=e=>{for(var t of r.attributes)"$"!=t.name[0]&&"@"!=t.name[0]||(t.value=I(t.value,n))},D(r)&&!e){var o=a(!0),e=++u+"",l=a(!0);r[M]=e,r.before(document.createTextNode(o)),c[o]=f+`[${e}]=${f}=>{`,i(),t(r.content||r,!0),r.after(document.createTextNode(l)),c[l]="};"}else{i();let e=r.firstChild;for(;e;)t(e),e=e.nextSibling}else{let e=r.firstChild;for(;e;)t(e),e=e.nextSibling}}(o=e.content||e,!0);let r=e=>e,n=(Object.keys(c).length&&(t="/*"+e.outerHTML.replace(/\*\//g,"* /").replace(J,e=>`*/${c[e]}/*`)+"*/",r=new Function(f,t)),s.forEach(e=>e.remove()),function t(r){var e=S(r)?r.textContent:r.nodeValue;if(C.test(e))r.remove();else{let e=r.firstChild;for(;e;){var n=e.nextSibling;t(e),e=n}/^template$/i.test(r.tagName)&&r.content&&t(r.content)}}(o),T(e));e[P]=e=>{var t={};return r(t),n(e,t)}}return e[P](this)}fromTag(t,...r){let e=B.get(t);if(!e){var n=[t[0]];for(let e=0;e<r.length;++e)n.push("\uf74a"+e+"\uf74b"),n.push(t[e+1]);var o=document.createElement("template");o.innerHTML=n.join(""),e=T(o),B.set(t,e)}var i={};for(let e=0;e<r.length;++e)i[e]=r[e];return e(this,i)}},F=(x.add("json",e=>{let t=h();return{node:t,updates:[e=>{t.nodeValue=JSON.stringify(e)}]}},e=>!0),x.add("text",e=>{let t=h();return{node:t,updates:[e=>{t.nodeValue=null==e?"":e}]}},e=>!p(e)),x.add("list",u=>{var e=document.createDocumentFragment();let a=[h()];e.appendChild(a[0]);let f,c,s=()=>{var e=a[a.length-2],t=a.pop();n(e,t),t.remove()},d=()=>{for(;1<a.length;)s();f=null,c=null};return{node:e,updates:[(r,...n)=>{r=O.pierce(r);let o=g.getHidden(r,m);if(o!==m)if(p(r)){if(Array.isArray(r))f&&!c||(d(),f=[]);else{var t=Object.keys(r);if(r=t.map(e=>r[e]),f&&c){let e=0;for(;e<c.length&&t[e]==c[e];)++e;for(;f.length>e;)s(),f.pop()}else d(),f=[];c=t}for(;f.length>r.length;)s(),f.pop();for(f.forEach((e,t)=>{(c?c[t]:t)in o&&e(r[t],...n)});f.length<r.length;){var e=f.length,i=u(u),l=void 0,l=(l=h(),a[a.length-1].after(l),a.push(l),l.before(i.node),j(i.updates));f.push(l),l(r[e],...n)}}else d()}]}}),x.transforms.data=(t,r,e)=>{if(""==r&&(r=o),(r=[].concat(r)).some(e=>"function"!=typeof e))throw Error("needs data-function argument(s)");return e=>((e=t(e)).updates=[j(e.updates,...r)],e)},x.transforms.foreach=(r,e,t)=>{let n=t.named.list;return x.transforms.data(t=>n(e=>r(t)),e,t)},x.transforms.keyValue=(n,i,e)=>{""==i&&(i=o),i=[].concat(i);let l=e.named.list;return e=>{let o=Object.create(null);var t=e,e=l(e=>n(t)),r=[(r,...e)=>{r=i[0](r,...e);let n=o;return o=Object.create(null),Array.isArray(r)?r.map((e,t)=>((t=o[t]=n[t]||{key:t}).value=e,g.addHidden(t,{value:g.getHidden(e)}))):"object"==typeof r?Object.keys(r).sort().map(e=>{var t=o[e]=n[e]||{key:e};return t.value=r[e],g.addHidden(t,{value:g.getHidden(t.value)})}):[{key:null,value:r}]}].concat(i.slice(1));return e.updates=[j(e.updates,...r)],e}},Symbol());function r(){let e=[];return{g:e,O:(...t)=>e.forEach(e=>e(...t))}}function N(n){let o=r(),i=r(),l=r(),u,a=(this.trackMerges=(e,t,r)=>((t?i:l).g.push(e),r&&o.g.push(e),this),this.trackData=(e,t,r)=>{let n=j([].concat(e));return this.trackMerges(e=>{e=g.addHidden(u,e),n(e)},t,r),n(u),this},Object.defineProperty(this,"data",{get(){return u},set(e){var t=g.make(n,e);p(t)&&(t[y]=!0),n=e,o.O(t),u=g.tracked(n,i.O,l.O,t)}}),this.data=n,this.merge=(e,t)=>{var r=g.apply(n,e);r!==n&&(n=r,p(e))&&(e[y]=!0),(t?i:o).O(e),u=g.tracked(n,i.O,l.O,e)},(e,t,r,n)=>{if(!(e="string"==typeof e?document.querySelector(e):e))throw Error("invalid host");"string"==typeof t&&(t=(t=document.querySelector(t))&&x.fromElement(t)),r||"function"==typeof t||(r=t,t=null),r=r||x,t=(t=t||r.fromElement(e))(r.dynamic),this.trackData(t.updates,!1,!0),r=t.node,n?e!==r&&e.replaceWith(r):e.append(r)});this.addTo=(e,t,r)=>(a(e,t,r,!1),this),this.replace=(e,t,r)=>(a(e,t,r,!0),this)}x.transforms.if=(i,l,e)=>(""==l&&(l=o),e[F]=l,r=>{let n=u(),o=null;return{node:n.t,updates:[(...e)=>{var t;l(...e)?(o||(t=i(r),n.o(t.node),o=j(t.updates)))(...e):o&&(n.o(),o=null)}]}}),x.transforms.else=(e,t,r)=>{let n=r[F];if(n)return e=x.transforms.if(e,e=>!n(e),r),delete r[F],e;throw Error("@else must follow @if")},t=new N([]);let U={merge:g,access:O,combineUpdates:j,getRaw:c,global:x,errors:t,Wrapped:N,wrap(e,t){return new N(e)},addTo(e,t,r){return U.wrap(t).addTo(e,r)},replace(e,t,r){return U.wrap(t).replace(e,r)}};return e&&s(e.bind(self),Matsui=U),U})("function"==typeof Matsui?Matsui:self.Matsui),Matsui.interaction=(e=>{e.class=(r,n)=>{let o="";return e=>{var t=n();t!=o&&((o+"").split(/\s+/g).forEach(e=>{e&&r.classList.remove(e)}),(t+"").split(/\s+/g).forEach(e=>{e&&r.classList.add(e)}),o=t)}};var t=document.createElement("style");function a(e,t){return(t.ctrlKey||t.shiftKey)&&(e*=.1),t.metaKey||t.altKey?0<e?1/0:e<0?-1/0:0:e}function f(e){return!e.ctrlKey&&0==e.button}function c(t,r,n){t.hasAttribute("tabindex")||t.setAttribute("tabindex",0),t.addEventListener("keydown",e=>{r[e.key]&&(t.focus(),e.preventDefault(),e.stopPropagation(),r[e.key](e))}),n&&t.addEventListener("keyup",e=>{n[e.key]&&(e.preventDefault(),e.stopPropagation(),n[e.key](e))})}t.textContent=".interaction-implicit-focus :focus {outline: none;}",document.head.appendChild(t),window.addEventListener("pointerdown",e=>{document.body.classList.add("interaction-implicit-focus")},{capture:!0}),window.addEventListener("keydown",e=>{"Tab"==e.code&&document.body.classList.remove("interaction-implicit-focus")},{capture:!0}),window.addEventListener("keydown",e=>{"Escape"==e.code&&(document.body.classList.contains("interaction-implicit-focus")?e.target.blur():document.body.classList.add("interaction-implicit-focus"))}),e.value=(r,n,o)=>{let i="INPUT"==r.tagName&&"checkbox"==r.type,l="INPUT"==r.tagName&&("range"==r.type||"number"==r.type);if("string"!=typeof n)return e=>{r.value=n()};{let e=(n=n.split(".")).pop();function t(){let t=o();n.forEach(e=>t=t?.[e]),t&&(t[e]=i?r.checked:l?parseFloat(r.value):r.value)}return r.addEventListener("input",t),r.addEventListener("change",t),t=>{n.forEach(e=>t=t?.[e]),t&&(r.value=t[e],i)&&(r.checked=t[e])}}};let s=e.moveKeys=(r,n)=>{let t=(e,t)=>n({x:e,y:t,node:r});c(r,{ArrowDown:e=>t(0,a(1,e)),ArrowUp:e=>t(0,a(-1,e)),ArrowLeft:e=>t(a(-1,e),0),ArrowRight:e=>t(a(1,e),0),PageDown:e=>t(0,1/0),PageUp:e=>t(0,-1/0),Home:e=>t(-1/0,0),End:e=>n(1/0,0)})};return e.pointerLock=(e,t)=>{e._interactionPointerLock="function"==typeof t?t():""==t||t},e.move=(n,o)=>{n.classList.add("interaction-has-move"),n.style.touchAction="none",n.style.cursor=n.style.cursor||"grab";let t="grab",i,l;function r(e){e.preventDefault(),e.stopPropagation();let t=e.pageX-i,r=e.pageY-l;document.pointerLockElement==n&&(t=e.movementX,r=e.movementY),i=e.pageX,l=e.pageY,o({x:a(t,e),y:a(r,e),node:n})}let u=0;function e(e){n.classList.remove("interaction-move"),e.preventDefault(),e.stopPropagation(),document.pointerLockElement==n&&document.exitPointerLock(),e.pointerId&&n.releasePointerCapture(e.pointerId),--u<=0&&(u=0,n.removeEventListener("pointermove",r)),n.style.pointer=t}n.addEventListener("pointerdown",e=>{n.classList.add("interaction-move"),f(e)&&(e.preventDefault(),e.stopPropagation(),n.focus(),i=e.pageX,l=e.pageY,n.setPointerCapture(e.pointerId),n._interactionPointerLock&&n.requestPointerLock(),1==++u&&n.addEventListener("pointermove",r),t=n.style.pointer)}),n.addEventListener("pointerup",e),n.addEventListener("pointercancel",e),n.addEventListener("blur",e),s(n,e=>o({x:15*e.x,y:15*e.y,node:e.node}))},e.scroll=(e,t)=>{e.classList.add("interaction-has-scroll"),e.addEventListener("wheel",e=>{e.preventDefault(),e.stopPropagation(),focus(),t({x:a(e.deltaX,e),y:a(e.deltaY,e)})},{capture:!0})},e.press=(n,o)=>{n.classList.add("interaction-has-press");let i=0,l=0,u=!1,t=e=>{var t=Date.now(),r=t-l;l=t,300<r&&(i=0),n.classList.add("interaction-press"),u||o({count:++i,event:e,node:n}),u=!0,e.pointerId&&n.setPointerCapture(e.pointerId)};var e=e=>{e.preventDefault(),e.stopPropagation(),n.classList.remove("interaction-press"),u=!1,e.pointerId&&n.releasePointerCapture(e.pointerId)};c(n,{Enter:t," ":t},{Enter:e," ":e}),n.addEventListener("blur",e),n.addEventListener("pointerdown",e=>{f(e)&&(e.preventDefault(),e.stopPropagation(),n.focus(),t(e))}),n.addEventListener("pointerup",e),n.addEventListener("pointercancel",e)},e.unpress=(t,r)=>{t.classList.add("interaction-has-unpress");let n=null,o=e=>{n=Date.now(),e.preventDefault(),e.stopPropagation(),e.pointerId&&t.setPointerCapture(e.pointerId)};var e=e=>{e.preventDefault(),e.stopPropagation(),null!=n&&r({duration:.001*(Date.now()-n),event:e,node:t}),n=null,e.pointerId&&t.releasePointerCapture(e.pointerId)};c(t,{Enter:o},{Enter:e}),t.addEventListener("blur",e),t.addEventListener("pointerdown",e=>{f(e)&&(t.focus(),o(e))}),t.addEventListener("pointerup",e)},e.click=(n,o)=>{let i=0,l=0;n.addEventListener("click",e=>{var t=Date.now(),r=t-l;l=t,300<r&&(i=0),o({count:++i,event:e,node:n})})},e.delete=(e,t)=>{e.addEventListener("keydown",e=>{"Delete"!=e.code&&"Backspace"!=e.code||(e.preventDefault(),e.stopPropagation(),t())})},e.cancel=(e,t)=>{e.addEventListener("keydown",e=>{"Escape"==e.code&&(e.preventDefault(),e.stopPropagation(),t())})},e.done=(t,r)=>{let n="INPUT"!=t.tagName;n||t.hasAttribute("enterkeyhint")||t.setAttribute("enterkeyhint","done"),t.addEventListener("keydown",e=>{"Enter"!=e.key||n&&!e.metaKey&&!e.shiftKey||(e.preventDefault(),e.stopPropagation(),r(t.value,e))})},e.clipboard=(r,n)=>(r.classList.add("interaction-has-clipboard"),e.press(r,e=>{var t=n?"function"==typeof n?n(r):n:r.textContent;navigator.clipboard.writeText(t),r.classList.remove("interaction-clipboard"),r.classList.add("interaction-clipboard"),setTimeout(()=>{r.classList.remove("interaction-clipboard")},1e3)})),e.dropFileIf=(e,t)=>{e._interactionDropIfHandler=t},e.dropFile=(r,n)=>{r.classList.add("interaction-has-drop"),""==n&&(n=e=>{let t=r.parentNode;for(;t;){if(t._interactionDropHandler)return void t._interactionDropHandler(e);t=t.parentNode}}),r._interactionDropHandler=n;let o=r._interactionDropIfHandler||(e=>!0);function i(e){let t=[];return e.dataTransfer.items?[...e.dataTransfer.items].forEach(e=>{"file"===e.kind&&t.push(e.getAsFile())}):t=[...e.dataTransfer.files],t.length&&t}let l=null;r.addEventListener("dragenter",e=>{l=e.target;var t=i(e);t&&o(t,e)&&(r.classList.add("interaction-drop"),e.preventDefault(),e.stopPropagation())}),r.addEventListener("dragleave",e=>{e.target===l&&r.classList.remove("interaction-drop")}),r.addEventListener("dragover",e=>{e.preventDefault();var t=i(e);t&&o(t,e)||r.classList.remove("interaction-drop")}),r.addEventListener("drop",e=>{var t=i(e);r.classList.remove("interaction-drop"),document.querySelectorAll(".interaction-drop").forEach(e=>{e.classList.remove("interaction-drop")}),t&&o(t,e)&&(e.preventDefault(),e.stopPropagation(),n(t))}),"INPUT"==r.tagName&&"file"==r.type&&r.addEventListener("change",e=>{e.preventDefault();var t=[].slice.call(r.files,0);t.length&&t&&o(t,e)&&n(t)})},e.dialogWhen=(r,n)=>{if("DIALOG"!==r.tagName)throw Error("only use $dialog-when on <dialog>");function e(){r._interactionHasDialogClose||console.error("<dialog> closed with no $dialog-close to align the state")}return r.addEventListener("close",e),r.addEventListener("cancel",e),r.addEventListener("click",e=>{var t=(t=r.getBoundingClientRect()).top<=event.clientY&&event.clientY<=t.bottom&&t.left<=event.clientX&&event.clientX<=t.right;e.target!==r||t||r.close()},{capture:!0}),e=>{var t="function"==typeof n?n():n;t&&!r.open?r.showModal():!t&&r.open&&r.close()}},e.dialogClose=(e,t)=>{e._interactionHasDialogClose=!0,e.addEventListener("close",t),e.addEventListener("cancel",t)},{keys:c}})(Matsui.global.attributes),Matsui.makeHash=(e,t)=>{var r=location.href.replace(/^[^#]*#?/,""),n=(e="string"!=typeof e?r.replace(/\?.*/,""):e)+((n=t&&"object"==typeof t?Object.keys(t).filter(e=>null!=t[e]).map(e=>""===t[e]?encodeURIComponent(e):[e,t[e]].map(encodeURIComponent).join("=")).join("&").replace(/%20/g,"+"):"")&&"?")+n;return{hash:n,push:n!=r&&r.replace(/\?.*/,"")!=e}},Matsui.merge.apply(Matsui.Wrapped.prototype,{syncHash(o){let i=this;function t(e){var t=(r=location.href.replace(/^[^#]*#?/,"")).replace(/\?.*/,""),r=r.substr(t.length+1);let n={};r.replace(/\+/g,"%20").split("&").forEach(e=>{e&&(e=e.split("=").map(t=>{try{return decodeURIComponent(t)}catch(e){return t}}),n[e.shift()]=e.join("="))}),(r=o(i.data)).path!==t&&(r.path=t),r.query!==n&&(r.query=n),Matsui.merge.apply(r.state,Matsui.merge.make(r.state,e))}addEventListener("hashchange",e=>t(null)),addEventListener("popstate",e=>t(window.history.state)),t(window.history.state),i.addUpdates(e=>{var e=o(e),t=Matsui.makeHash(e.path,e.query),e=(e=Matsui.getRaw(Matsui.access.pierce(e.state)))&&JSON.parse(JSON.stringify(e));t.push?window.history.pushState(e,"","#"+t.hash):window.history.replaceState(e,"","#"+t.hash)})},syncLocalStorage(o){let i=this;function l(t){var e=o(i.data);if(null===t)for(var r in e)l(r);else{var n=localStorage.getItem(t);if(n)try{e[t]=JSON.parse(n)}catch(e){console.error("localStorage."+t,e)}}}addEventListener("storage",e=>l(e.key)),l(null),i.addUpdates(e=>{var t,r=o(e);for(t in r){var n=r[t];null==n?localStorage.removeItem(t):localStorage.setItem(t,JSON.stringify(n))}})}}),Matsui.version="latest";
+//# sourceMappingURL=matsui-bundle.min.js.map</script>
+		<script>
+			let balloonOptions = {rounds: 5, buffers: 32768 /* *(256 bits) = 1MB of memory */};
+			let render = Matsui.replace(document.body, {
+				encrypt: false,
+				needsKey: true,
+				working: null,
+				files: [],
+				filename: '',
+				result: null,
+				foo: 'bar'
+			});
+			document.querySelector('#seedKey').focus();
+			let display = render.data;
+		
+			let salt = new Uint8Array(32);
+			crypto.getRandomValues(salt);
+			
+			function generateKey(key) {
+				display.needsKey = false;
+				display.working = {
+					task: "computing key",
+					progress: 0,
+					seconds: null
+				};
+				let start = Date.now();
+				let options = Object.create(balloonOptions);
+				options.progress = (n, N) => {
+					display.working.progress = n/N;
+					display.working.seconds = Math.round((Date.now() - start)*N/n)/1000;
+				};
+				cryptoUtils.balloonPair(salt, key, options).then(pair => {
+					display.working = null;
+					display.encrypt = async content => {
+						if (content instanceof Blob) {
+							content = await content.arrayBuffer();
+						}
+						return pair.encrypt(content, true);
+					};
+
+					updateResult();
+				});
+			}
+			
+			async function updateResult() {
+				if (display.result?.url) {
+					URL.revokeObjectURL(display.result.url);
+				}
+				if (!display.encrypt || !display.files.length) return;
+				delete display.result;
+				
+				let files = Matsui.getRaw(display.files);
+
+				let dataLength = 0;
+				function spaceForBlock(data) {
+					if (typeof data === 'string') {
+						// convert to UTF-8
+						let encoder = new TextEncoder();
+						data = encoder.encode(data);
+					}
+					if (typeof data !== 'number') data = data.length;
+					dataLength += 8 + data;
+				}
+				files.forEach(file => {
+					spaceForBlock(file.name || 'Media');
+					spaceForBlock(file.type);
+					spaceForBlock(file.size);
+				});
+				
+				// Big concatenated buffer of (name, type, body) for each file
+				let buffer = new ArrayBuffer(dataLength), view = new DataView(buffer), bufferPos = 0;
+				function writeBlock(data) {
+					if (typeof data === 'string') {
+						// convert to UTF-8
+						let encoder = new TextEncoder();
+						data = encoder.encode(data);
+					}
+					view.setUint32(bufferPos, (data.length/4294967296)|0);
+					view.setUint32(bufferPos + 4, data.length|0);
+					bufferPos += 8;
+					new Uint8Array(buffer).set(data, bufferPos);
+					bufferPos += data.length;
+				}
+				await Promise.all(files.map(async file => {
+					let array = new Uint8Array(await file.arrayBuffer());
+					writeBlock(file.name || 'Media');
+					writeBlock(file.type);
+					writeBlock(array);
+				}));
+				window.buffer = buffer;
+
+				let optionsJson = JSON.stringify(balloonOptions);
+				let encrypted64 = await display.encrypt(buffer);
+
+/*
+async function d(key) {
+	let body = document.body;
+	balloonOptions.progress = ((t, n) => body.textContent = Math.round(100 * t / n) + "%");
+	let n = await cryptoUtils.balloonPair(Uint8Array.fromBase64(s64), key, balloonOptions),
+		arrayBuffer = await n.decrypt(e64);
+	body.textContent = '';
+	let dataView = new DataView(arrayBuffer),
+		r = new Uint8Array(arrayBuffer),
+		i = 0;
+
+	function readChunk(t) {
+		let e = 4294967296 * dataView.getUint32(i) + dataView.getUint32(i + 4);
+		i += 8;
+		let n = r.subarray(i, i + e);
+		return i += e, t ? new TextDecoder("utf-8", {
+			fatal: !0
+		}).decode(n) : n
+	}
+	let tagMap={image:'img',audio:'audio',video:'video',text:'iframe'};
+	for (; i < r.length;) {
+		let name = readChunk(1), type = readChunk(1);
+		let a = document.createElement("a");
+		a.href = URL.createObjectURL(new File([readChunk()], name, {type: type}));
+		a.setAttribute("download", a.textContent = name);
+		body.append(a);
+		let mediaType = type.split('/')[0];
+		if (tagMap[mediaType]) {
+			let player = document.createElement(tagMap[mediaType]);
+			player.src = player.data = a.href;
+			player.controls = true;
+			body.append(player);
+		}
+	}
+}
+ */
+				let html = `<!DOCTYPE html>
+<html><head><title></title><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{display: flex;flex-direction:column;justify-content:stretch;align-items:center;min-height:100vh;justify-content:center;font:12pt sans-serif;color:#FFF;background:#222;margin:0;padding:0}img,video{max-width:100vw;max-height:100vh;flex-shrink:1}a{color:#8AF;text-decoration:none;margin-top:1em}iframe{background:#FFF;width:100%;flex-grow:0.8}</style>
+</head><body><form onsubmit="return false"><input id="p" type="password" autofocus><input type="submit" value="go" onclick="d(document.querySelector('#p').value).catch(e=>document.body.textContent='failed')"></form><script>
+let balloonOptions=${optionsJson},s64=${JSON.stringify(salt.toBase64())},e64=${JSON.stringify(encrypted64)};
+let cryptoUtils=(${cryptoUtils.factory})();
+async function d(t){let e=document.body;balloonOptions.progress=((t,n)=>e.textContent=Math.round(100*t/n)+"%");let n=await cryptoUtils.balloonPair(Uint8Array.fromBase64(s64),t,balloonOptions),a=await n.decrypt(e64);e.textContent="";let o=new DataView(a),r=new Uint8Array(a),i=0;function l(t){let e=4294967296*o.getUint32(i)+o.getUint32(i+4);i+=8;let n=r.subarray(i,i+e);return i+=e,t?new TextDecoder("utf-8",{fatal:!0}).decode(n):n}let d={image:"img",audio:"audio",video:"video",text:"iframe"};for(;i<r.length;){let t=l(1),n=l(1),a=document.createElement("a");a.href=URL.createObjectURL(new File([l()],t,{type:n})),a.setAttribute("download",a.textContent=t),e.append(a);let o=n.split("/")[0];if(d[o]){let t=document.createElement(d[o]);t.src=t.data=a.href,t.controls=!0,e.append(t)}}}
+</${'script'}></body></html>`;
+				let htmlBlob = new Blob([html], {type: 'text/html'});
+				display.result = {
+					url: URL.createObjectURL(htmlBlob),
+					size: Math.ceil(html.length/1000) + 'kB'
+				};
+			}
+			
+			function addFiles(files) {
+				files.forEach(file => {
+					display.files.push(file);
+					if (!display.filename) {
+						display.filename = file.name.replace(/\.[^\.]*$/, '') + '.html';
+					}
+				});
+				if (!display.working) updateResult();
+			}
+
+			if (0) blobberPromise.then(pair => {
+				let logJson = x => console.log(JSON.stringify(x));
+				pair.encrypt("abcd", true).then(console.log);
+				pair.encrypt("wxyz").then(console.log);
+				pair.encrypt("abcd", true).then(x => pair.decrypt(x, true)).then(logJson);
+				pair.encrypt("wxyz").then(x => pair.decrypt(x, true)).then(logJson);
+				
+				pair.encrypt("This encoding should fail").then(combined => {
+					combined[10] += 5;
+					return combined;
+				}).then(pair.decrypt).then(x => {throw Error("should have failed!")}, e => console.log("✓ modified data failed"));
+				return pair;
+			});
+		</script>
+	</body>
+</html>
