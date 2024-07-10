@@ -124,7 +124,7 @@ let cryptoUtils = (function factory() {
 	*/
 	
 	// https://eprint.iacr.org/2016/027.pdf with sha256
-	let balloon = api.balloon = async function(salt, key, options={}) {
+	api.balloon = async function(salt, key, options={}) {
 		let encoder = new TextEncoder();
 		if (typeof salt === 'string') salt = sha256(encoder.encode(salt));
 		if (typeof key === 'string') text = sha256(encoder.encode(key));
@@ -241,7 +241,9 @@ let cryptoUtils = (function factory() {
 	};
 
 	Uint8Array.prototype.toBase64 = function(webSafe) {
-		let result = btoa(Array.from(this, x => String.fromCharCode(x)).join(""));
+		let result = "";
+		this.forEach(x => result += String.fromCharCode(x));
+		result = btoa(result);
 		if (webSafe) result = result.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+/, '');
 		return result;
 	};
