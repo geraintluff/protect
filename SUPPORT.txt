@@ -1,0 +1,7 @@
+# Support periods and contact info
+# https://github.com/geraintluff/SUPPORT.txt
+
+2024-08-01 Geraint <luffgd@gmail.com>
+
+Questions that don't need me to write code
+2025-01-01 Geraint <luffgd@gmail.com>
