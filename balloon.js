@@ -24,7 +24,7 @@ let cryptoUtils = (function factory() {
 			let encoder = new TextEncoder();
 			uint8array = encoder.encode(uint8array);
 		}
-		let outputHex = output8 == 'hex';
+		let outputHex = (output8 == 'hex');
 		if (outputHex) output8 = null;
 		output8 = output8 || new Uint8Array(32);
 

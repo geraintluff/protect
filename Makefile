@@ -1,6 +1,6 @@
 all: balloon.min.js matsui-bundle.min.js protect.html
 
-protect.html:
+protect.html: index.html *.min.js
 	node -e 'const fs=require("fs");fs.writeFileSync("protect.html",fs.readFileSync("index.html","utf8").replace(/<script src="([^"]*)">/g,(m,filename)=>"<script>"+fs.readFileSync(filename,"utf8")));'
 
 %.min.js: %.js

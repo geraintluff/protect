@@ -38,6 +38,39 @@
 				padding: 0.3em 0.5em;
 				font-size: inherit;
 			}
+			#input-row {
+				display: flex;
+				align-items: stretch;
+				justify-content: center;
+			}
+			input[type=file] {
+				border: 2px dashed #8884;
+				border-radius: 4px;
+			}
+			#text-editor textarea {
+				display: block;
+				width: 100%;
+			}
+			.file {
+				max-width: 300pt;
+				margin: 0.5em auto;
+				background: #8884;
+				border-radius: 0.3em;
+			}
+			.file-name {
+				font-family: monospace;
+			}
+			.file-size {
+				float: right;
+				margin: 0 1em;
+			}
+			.file-size::after {
+				content: ' bytes';
+			}
+			.file-delete {
+				float: left;
+				margin: 0 0.5em;
+			}
 		</style>
 	</head>
 	<body $drop-file="${addFiles}">
@@ -64,9 +97,16 @@
 			</template>
 		</div>
 		<div>
-			<input type="file" $drop-file>
-			<div @foreach="{files}">
-				{name} {size}
+			<div id="input-row">
+				<input type="file" $drop-file>
+				<div id="text-editor">
+					<input $value="text.name"></textarea>
+					<button $click="${addText}">add</button>
+					<textarea $value="text.value" placeholder="plain text"></textarea>
+				</div>
+			</div>
+			<div @foreach="{files}" class="file">
+				<span class="file-name">{name}</span> <span class="file-size">{size}</span> <span class="file-delete" $click="${(e, d) => deleteFile(d)}">❌</span>
 			</div
 		</div>
 		
@@ -89,7 +129,11 @@
 				files: [],
 				filename: '',
 				result: null,
-				foo: 'bar'
+				foo: 'bar',
+				text: {
+					name: 'text.txt',
+					value: ''
+				}
 			});
 			document.querySelector('#seedKey').focus();
 			let display = render.data;
@@ -231,6 +275,20 @@ async function d(t){let e=document.body;balloonOptions.progress=((t,n)=>e.textCo
 					}
 				});
 				if (!display.working) updateResult();
+			}
+			function deleteFile(file) {
+				file = Matsui.getRaw(file);
+				let files = Matsui.getRaw(display.files);
+				let index = files.indexOf(file);
+				if (index >= 0) display.files.splice(index, 1);
+			}
+			function addText() {
+				let file = new File([display.text.value], display.text.name, {type: 'text/plain'});
+				addFiles([file]);
+				display.text = {
+					name: 'text.txt',
+					value: ''
+				};
 			}
 
 			if (0) blobberPromise.then(pair => {
